@@ -1,43 +1,29 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Jun 13 02:20:31 2020
-
-@author: Krish Naik
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Fri May 15 12:50:04 2020
-
-@author: krish.naik
-"""
-
-
 import numpy as np
 import pickle
 import pandas as pd
-#from flasgger import Swagger
-import streamlit as st 
+from flask import Flask, request
+from flasgger import Swagger
+#import streamlit as st
 
-from PIL import Image
 
-#app=Flask(__name__)
-#Swagger(app)
+app = Flask(__name__)
+Swagger(app)
 
-pickle_in = open("classifier.pkl","rb")
-classifier=pickle.load(pickle_in)
+pickle_in = open("classifier.pkl", "rb")
+classifier = pickle.load(pickle_in)
 
-#@app.route('/')
+
+@app.route('/')
 def welcome():
     return "Welcome All"
 
-#@app.route('/predict',methods=["Get"])
-def predict_note_authentication(variance,skewness,curtosis,entropy):
-    
-    """Let's Authenticate the Banks Note 
+
+@app.route('/predict',methods=["Get"])
+def predict_note_authentication():
+    """Let's Authenticate the Banks Note
     This is using docstrings for specifications.
     ---
-    parameters:  
+    parameters:
       - name: variance
         in: query
         type: number
@@ -57,37 +43,34 @@ def predict_note_authentication(variance,skewness,curtosis,entropy):
     responses:
         200:
             description: The output values
-        
+
     """
-   
-    prediction=classifier.predict([[variance,skewness,curtosis,entropy]])
-    print(prediction)
-    return prediction
+    variance = request.args.get('variance')
+    skewness = request.args.get('skewness')
+    curtosis = request.args.get('curtosis')
+    entropy = request.args.get('entropy')
+    prediction = classifier.predict([[variance, skewness, curtosis, entropy]])
+    return "The prediction value is " + str(prediction)
 
-
-
-def main():
-    st.title("Bank Authenticator")
-    html_temp = """
-    <div style="background-color:tomato;padding:10px">
-    <h2 style="color:white;text-align:center;">Streamlit Bank Authenticator ML App </h2>
-    </div>
+@app.route('/predict_file', methods = ['POST'])
+def predict_file():
+    """Let's Authenticate the Banks Note
+    This is using docstrings for specifications.
+    ---
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+    responses:
+        200:
+            description: The output values
     """
-    st.markdown(html_temp,unsafe_allow_html=True)
-    variance = st.text_input("Variance","Type Here")
-    skewness = st.text_input("skewness","Type Here")
-    curtosis = st.text_input("curtosis","Type Here")
-    entropy = st.text_input("entropy","Type Here")
-    result=""
-    if st.button("Predict"):
-        result=predict_note_authentication(variance,skewness,curtosis,entropy)
-    st.success('The output is {}'.format(result))
-    if st.button("About"):
-        st.text("Lets LEarn")
-        st.text("Built with Streamlit")
+    df_test = pd.read_csv(request.files.get('file'))
+    prediction = classifier.predict(df_test)
+    return 'The predicted values for the CSV is '+ str(list(prediction))
 
-if __name__=='__main__':
-    main()
-    
-    
-    
+
+if __name__ == '__main__':
+    app.run(port = 5001)
+
